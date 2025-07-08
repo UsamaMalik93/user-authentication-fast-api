@@ -14,3 +14,19 @@ def create_user(db: Session, email: str, password: str):
     db.commit()
     db.refresh(db_user)
     return db_user 
+
+def create_refresh_token(db: Session, user_id: int, token: str, expires_at):
+    db_token = models.RefreshToken(user_id=user_id, token=token, expires_at=expires_at)
+    db.add(db_token)
+    db.commit()
+    db.refresh(db_token)
+    return db_token
+
+def get_refresh_token(db: Session, token: str):
+    return db.query(models.RefreshToken).filter(models.RefreshToken.token == token).first()
+
+def delete_refresh_token(db: Session, token: str):
+    db_token = get_refresh_token(db, token)
+    if db_token:
+        db.delete(db_token)
+        db.commit() 
