@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.db import crud
-from app.core.security import verify_password, create_access_token, create_refresh_token, verify_token
+from app.core.security import verify_password, create_access_token, create_refresh_token, verify_token, get_password_hash
 from datetime import datetime, timedelta
 
 
@@ -37,4 +37,12 @@ def validate_and_rotate_refresh_token(db: Session, refresh_token: str):
         return None, None
     # Rotate: delete old, issue new
     crud.delete_refresh_token(db, refresh_token)
-    return issue_tokens(db, user) 
+    return issue_tokens(db, user)
+
+
+def change_user_password(db: Session, user, old_password: str, new_password: str):
+    if not verify_password(old_password, user.hashed_password):
+        return False
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    return True 
