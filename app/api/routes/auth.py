@@ -34,6 +34,11 @@ def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
+@router.post("/logout")
+def logout(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+    crud.delete_refresh_token(db, request.refresh_token)
+    return {"msg": "Logged out successfully."}
+
 @router.get("/me", response_model=UserResponse)
 def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     payload = verify_token(token)
