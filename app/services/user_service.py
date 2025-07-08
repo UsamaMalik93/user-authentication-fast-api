@@ -8,8 +8,23 @@ def authenticate_user(db: Session, email: str, password: str):
     user = crud.get_user_by_email(db, email)
     if not user:
         return None
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    lockout_until = getattr(user, 'lockout_until', None)
+    if lockout_until and lockout_until > now:
+        return None  # Account is locked
     if not verify_password(password, user.hashed_password):
+        failed_attempts = getattr(user, 'failed_login_attempts', 0) or 0
+        user.failed_login_attempts = failed_attempts + 1
+        if user.failed_login_attempts >= 5:
+            user.lockout_until = now + timedelta(minutes=15)
+            user.failed_login_attempts = 0
+        db.commit()
         return None
+    # Success: reset counters
+    user.failed_login_attempts = 0
+    user.lockout_until = None
+    db.commit()
     return user
 
 
