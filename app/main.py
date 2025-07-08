@@ -6,6 +6,11 @@ from app.api.routes import auth
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
 
 # Create the FastAPI application instance
 app = FastAPI()
@@ -32,6 +37,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Set up the rate limiter: 5 requests per second per IP (customize as needed)
+limiter = Limiter(key_func=get_remote_address, default_limits=["5/second"])
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
+
+app.middleware("http")(limiter.middleware)
 
 # Include the authentication router under the /auth prefix
 app.include_router(auth.router, prefix="/auth", tags=["auth"]) 
